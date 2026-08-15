@@ -18,7 +18,7 @@ inline bool debugTraceInline;
 // Includes values returned by BTB 
 struct BTB_RET 
 {
-    byte counter = 0;
+    byte counter = 0, branchType = 0;
     word predictedTarget = 0;     // word that needs to go into PC if preditedTake is true
     bool HIT = false;             // This only mean a match was found in BTB (pcUpperCurrent == pcUpperBTB)
     bool predictedTaken = false;  // If the match was found then (predictedTaken = HIT && counterMSB)

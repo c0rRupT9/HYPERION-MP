@@ -73,6 +73,7 @@ class BTB
         word predictedTarget;
         word pcUpperBTB;
         byte counter;
+        byte branchType;
     };
 
     std::array<btbRow, BTB_SIZE> rows = {0};
@@ -92,7 +93,7 @@ public:
         returnResult.predictedTaken = counterMSB && returnResult.HIT;
         returnResult.counter = row.counter;
         returnResult.valid = row.valid;
-
+        returnResult.branchType = row.branchType;
         return returnResult;
     }
 
@@ -107,4 +108,33 @@ public:
         row.valid = validBit;
         return;
     }
+
+    class ReturnAddrStack
+    {
+        private:
+        std::array<word, 8> stack;
+        byte ptr = -1;
+
+        void push()
+        {
+
+        }
+
+        void pop()
+        {
+
+        }
+        public:
+        
+        ReturnAddrStack(){stack.fill(0);}
+        
+        void commit(const byte& branchType, byte& ptr)
+        {
+
+        }
+
+
+
+
+    };
 };

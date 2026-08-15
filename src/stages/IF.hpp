@@ -13,6 +13,7 @@ public:
     IFID_REG run(const BTB &btb, const word &programCounter, const std::array<word, MEM_SIZE> &imem)
     {
         IFID_REG ifid;
+        byte rasPtr;
         const BTB_RET btbResult = btb.searchRows(programCounter);
         ifid.counter = btbResult.counter;
         ifid.predictedTaken = btbResult.predictedTaken;
