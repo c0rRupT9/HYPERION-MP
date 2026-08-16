@@ -57,9 +57,10 @@ public:
         bool isStore = false;
         bool usesRS1 = false;
         bool usesRS2 = false;
+        bool rasPtrUpdate = false;
         word targetAdress = 0;
         word targetPc = 0;
-        byte counter = 0;
+        byte counter = 0, branchType = 0, correctedPtr = 0;
     };
 
     struct InstructionDecode
@@ -74,7 +75,6 @@ public:
         bool usesRS1 = false;
         bool usesRS2 = false;
     };
-
 
     InstructionDecode decoder(const word &instr)
     {
@@ -137,7 +137,10 @@ public:
         if (signals.spSel) // Push uses RS2 instead of RD
             decode.RS2 = decode.RD;
 
-        if(signals.spType) {decode.RS1 = 7;}  // If load is loading SP then we need to stall
+        if (signals.spType)
+        {
+            decode.RS1 = 7;
+        } // If load is loading SP then we need to stall
         // so declare the values before hand we can forward SP or read in EXEC unit.
         // Since we wont be branching using SP we can forward it in EXEC unit only.
         // If you really need to branch using SP use ADD then branch case.
@@ -148,7 +151,7 @@ public:
         // Forwarding from EXMEM and MEMWB with priority
         // if else if branches exit once matching contender is found
         idout.usesRS1 = decode.usesRS1;
-        idout.usesRS2 = (signals.spSel)? true : decode.usesRS2; // Since PUSH uses RD as RS2 
+        idout.usesRS2 = (signals.spSel) ? true : decode.usesRS2; // Since PUSH uses RD as RS2
 
         if (decode.RS1 != 0)
         {
@@ -194,6 +197,11 @@ public:
             bool branchMismatch = idout.actualTaken ^ ifid.predictedTaken;
             bool offsetMismatch = idout.actualTaken && ifid.predictedTaken && (ifid.predictedTarget != idout.targetAdress);
             idout.mismatch = (branchMismatch || offsetMismatch);
+            idout.rasPtrUpdate = offsetMismatch; // RAS update
+            idout.correctedPtr = ifid.rasPtr + 1;
+
+            if (signals.isJump)
+                idout.branchType = (signals.isJump && (decode.tag == 0b01)) ? 2 : 1;
         }
         idout.isStore = signals.memWrite; // Store Hazard Case Handling
         idout.nextIdex.ALUOp = signals.aluOP;
@@ -216,7 +224,6 @@ public:
     }
 
 private:
-
     struct ControlSignals
     {
         // There are a total of 14 control Signals some will be forwarded to other stages while three of them will

@@ -18,10 +18,10 @@ inline bool debugTraceInline;
 // Includes values returned by BTB 
 struct BTB_RET 
 {
-    byte counter = 0, branchType = 0;
-    word predictedTarget = 0;     // word that needs to go into PC if preditedTake is true
-    bool HIT = false;             // This only mean a match was found in BTB (pcUpperCurrent == pcUpperBTB)
-    bool predictedTaken = false;  // If the match was found then (predictedTaken = HIT && counterMSB)
+    byte counter = 0, branchType = 0; // 00 for noraml branches, 01 for JAL based CALL, 10 for JALR based RET
+    word predictedTarget = 0;         // word that needs to go into PC if preditedTake is true
+    bool HIT = false;                 // This only mean a match was found in BTB (pcUpperCurrent == pcUpperBTB)
+    bool predictedTaken = false;      // If the match was found then (predictedTaken = HIT && counterMSB)
     bool valid = false;
 };
 
@@ -33,7 +33,7 @@ struct BTB_RET
 
 struct IFID_REG
 {
-    byte counter = 0;
+    byte counter = 0, branchType = 0, rasPtr = 0;
     word instruction = 0;        // current 16-bit instruction, instruction = 0 incase of flushes
     word pc = 0;                 // current PC stored in PC_REG
     word pcNext = 0;             // Next PC PC_REG will take i.e pc++

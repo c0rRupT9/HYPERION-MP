@@ -24,6 +24,7 @@ namespace risc
         MEMWB_REG memwbCurr{}, memwbNext{};
         BTB btb;
         RegisterFile regs;
+        ReturnAddrStack ras;
 
         IF ifStage;
         ID idStage;
@@ -53,7 +54,7 @@ namespace risc
                 return (rd != 0) && (((idexNext.RS1 == rd) && decOut.usesRS1) || ((idexNext.RS2 == rd) && decOut.usesRS2));
             };
             // STORE and PUSH cases will be evaluated by loadStoreStall
-            loadStoreStall = decOut.usesRS1 && (idexCurr.memRead && idexNext.RS1 == idexCurr.RD) && (idexCurr.RD != 0); 
+            loadStoreStall = decOut.usesRS1 && (idexCurr.memRead && idexNext.RS1 == idexCurr.RD) && (idexCurr.RD != 0);
             // Will invoke only when current instruction in DEC is not a STORE or PUSH
             loadUseStall = (idexCurr.memRead && matches_rs(idexCurr.RD)) && !decOut.isStore;
             result.branchArithStall = decOut.isBranchOrJalr && idexCurr.regWrite && matches_rs(idexCurr.RD);
@@ -86,7 +87,7 @@ namespace risc
             bool stall = result.stall;
 
             // IF Stage
-            ifidNext = ifStage.run(btb, pc, imem);
+            ifidNext = ifStage.run(btb, pc, ras, decOut.mismatch, stall, imem);
 
             // Save cuurent pc for BTB update
             word bracnhPc = ifidCurr.pc;
@@ -107,6 +108,8 @@ namespace risc
             }
             else if (decOut.mismatch)
             {
+                if (decOut.rasPtrUpdate)
+                    ras.ptrUpdate(decOut.correctedPtr);
                 // MISPREDICTION FLUSH: Update PC, Flush IF/ID
                 pcNext = decOut.targetPc;
                 ifidCurr = IFID_REG{}; // Flush IF/ID latch
@@ -115,7 +118,7 @@ namespace risc
                 memwbCurr = memwbNext;
 
                 if (decOut.updateBTB)
-                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1);
+                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1, decOut.branchType);
             }
             else
             {
@@ -127,7 +130,7 @@ namespace risc
                 memwbCurr = memwbNext;
 
                 if (decOut.updateBTB)
-                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1);
+                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1, decOut.branchType);
             }
 
             if (debugTraceInline)
@@ -141,10 +144,9 @@ namespace risc
                 halted = true;
 
             lastPc = pc;
-
             // Advance PC to PC_NEXT
             // DO NOT
-            // std::cout <<" cycle: " << cycle << '\n'; 
+            // std::cout <<" cycle: " << cycle << '\n';
             // regs.dump();
             pc = pcNext;
         }
@@ -167,11 +169,9 @@ namespace risc
                     break;
             }
 
-
-
             // debugTrace is a global Declaration, if you dont require Debug Traces set it to false in TYPES_HPP
-            if(debugTraceInline)
-                std::cout << log; //logs
+            if (debugTraceInline)
+                std::cout << log; // logs
             if (debugTrace)
             {
                 // Either Create a log file or dump all the streams to terminal pointer
@@ -183,6 +183,7 @@ namespace risc
             regs.dump();
             std::cout << trace.dumpBtb(btb);
             std::cout << trace.dumpMem(dmem);
+            ras.dump();
 
             std::cout << " Final PC: " << pc << std::endl;
         }

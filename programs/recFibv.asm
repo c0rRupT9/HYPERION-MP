@@ -4,7 +4,7 @@
 ;   0x0100 (256) -> Stack Pointer Base (R7)
 ;   0x0200 (512) -> Output RAM Base Address (R3)
 ; Uses CPU native ISA PUSH and POP based Rec Fib reducing payload by 1000 
-; cycles used = 5538
+; cycles used = 5538 diff after ras 220
 ; =======================================================================
 
 ; ========================================================================

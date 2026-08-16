@@ -96,8 +96,9 @@ public:
         oss << "| " << std::left << std::setw(8) << "PC/Row"
             << "| " << std::left << std::setw(12) << "Target"
             << "| " << std::left << std::setw(10) << "Counter"
-            << "| " << std::left << std::setw(12) << "Prediction" << " |\n";
-        oss << "+---------+-------------+-----------+--------------+\n";
+            << "| " << std::left << std::setw(12) << "Prediction"
+            << "| " << std::left << std::setw(12) << "BranchType" << " |\n";
+        oss << "+---------+-------------+-----------+--------------+------------+\n";
 
         bool entriesFound = false;
 
@@ -114,7 +115,8 @@ public:
                 oss << "| " << std::left << std::setw(8) << idx
                     << "| " << std::left << std::setw(12) << ret.predictedTarget
                     << "| " << std::left << std::setw(10) << static_cast<int>(ret.counter)
-                    << "| " << std::left << std::setw(12) << status << " |\n";
+                    << "| " << std::left << std::setw(12) << status
+                    << "| " << std::left << std::setw(12) << (int)ret.branchType << " |\n";
             }
         }
 

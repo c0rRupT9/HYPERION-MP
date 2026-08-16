@@ -5,8 +5,8 @@
 #include <array>
 #include <cstdio>
 
-
 const size_t BTB_SIZE = 32;
+const size_t RAS_DEPTH = 8;
 
 // ============================== Register file ==============================
 // 8 GPRs. R0 hardwired zero. R7 = SP, with its OWN dedicated write port
@@ -47,7 +47,6 @@ public:
         pendingSP = true;
         pendingSPVal = value;
     }
-
 
     void commit()
     {
@@ -97,7 +96,7 @@ public:
         return returnResult;
     }
 
-    void update(word currentPC, word calculatedTarget, byte calculatedCounter, byte validBit)
+    void update(word currentPC, word calculatedTarget, byte calculatedCounter, byte validBit, byte branchType)
     {
         word pcCurrentUpper = (currentPC >> 5) & 0x7FF;
         word pcCurrentLower = currentPC & 0b11111;
@@ -106,35 +105,49 @@ public:
         row.pcUpperBTB = pcCurrentUpper;
         row.counter = calculatedCounter;
         row.valid = validBit;
+        row.branchType = branchType;
         return;
     }
+};
 
-    class ReturnAddrStack
+class ReturnAddrStack
+{
+
+public:
+    ReturnAddrStack() { stack.fill(0); }
+
+    byte push(const word &pcNext, word instruction)
     {
-        private:
-        std::array<word, 8> stack;
-        byte ptr = -1;
+        ptr = (ptr + 1) & RAS_DEPTH - 1;
+        stack[ptr] = pcNext;
+       // std::cout << "Pushed, PTR: " << (int)ptr << "  Value: " << pcNext << "\n";
+       // std::cout << "Called by PC: " << (int)instruction << "\n";   
+        return ptr;
+    }
 
-        void push()
-        {
+    byte pop(word &predictedPc, word instruction)
+    {
+        predictedPc = stack[ptr];
+        ptr = (ptr - 1) & RAS_DEPTH - 1;
+           //     std::cout << "Popped, PTR: " << (int)ptr << "  Value: " << predictedPc <<"\n"; 
+            //    std::cout << "Called by PC: " << (int)instruction << "\n"; 
+        return ptr;
+    }
 
-        }
+    void ptrUpdate(byte &correctedPtr)
+    {
 
-        void pop()
-        {
+        // std::cout << "ptr corrected by DEC from: " << (int)ptr << " to: " << (int)correctedPtr << "\n";
+        ptr = correctedPtr;
+    }
 
-        }
-        public:
-        
-        ReturnAddrStack(){stack.fill(0);}
-        
-        void commit(const byte& branchType, byte& ptr)
-        {
+    void dump() const
+    {
+        for (int i = 0; i < 8; i++)
+            printf("  S%d = %d (0x%04X)\n", i, stack[i], stack[i]);
+    }
 
-        }
-
-
-
-
-    };
+private:
+    std::array<word, RAS_DEPTH> stack;
+    byte ptr = -1;
 };

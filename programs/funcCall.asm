@@ -35,7 +35,6 @@ funca:
     ADD R1, R1, R1
     JALR R0, R6, 0 ; Return to calee
 
-; RAS warmup
 
 
  
