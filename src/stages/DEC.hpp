@@ -60,7 +60,7 @@ public:
         bool rasPtrUpdate = false;
         word targetAdress = 0;
         word targetPc = 0;
-        byte counter = 0, branchType = 0, correctedPtr = 0;
+        byte counter = 0, correctedPtr = 0;
     };
 
     struct InstructionDecode
@@ -125,6 +125,16 @@ public:
         return dec;
     }
 
+    word signExtend_16(word imm, byte bits)
+    {
+        word mask = (1u << bits) - 1;
+        imm &= mask;
+
+        word sign_bits = 1u << (bits - 1);
+
+        return (imm ^ sign_bits) - sign_bits;
+    }
+
     Output run(const IFID_REG &ifid, ForwardResult &EXMEM_FOR, const ForwardResult &MEMWB_FOR,
                const RegisterFile &registerFile)
     {
@@ -171,7 +181,8 @@ public:
 
         if (signals.isBranch || signals.isJump)
         {
-            idout.updateBTB = true;
+            if (signals.isBranch)
+                idout.updateBTB = true;
 
             // BTB comparison Logic
             idout.actualTaken = (signals.isBranch) ? BranchComp(RS1_Val, RS2_Val, decode.subOp) : true;
@@ -197,11 +208,8 @@ public:
             bool branchMismatch = idout.actualTaken ^ ifid.predictedTaken;
             bool offsetMismatch = idout.actualTaken && ifid.predictedTaken && (ifid.predictedTarget != idout.targetAdress);
             idout.mismatch = (branchMismatch || offsetMismatch);
-            idout.rasPtrUpdate = offsetMismatch; // RAS update
+            idout.rasPtrUpdate = offsetMismatch && ifid.rasPOP; // RAS update
             idout.correctedPtr = ifid.rasPtr + 1;
-
-            if (signals.isJump)
-                idout.branchType = (signals.isJump && (decode.tag == 0b01)) ? 2 : 1;
         }
         idout.isStore = signals.memWrite; // Store Hazard Case Handling
         idout.nextIdex.ALUOp = signals.aluOP;
@@ -231,16 +239,6 @@ private:
         bool spSel, isJump, isBranch, memToReg, regWrite, reserve, spType, memWrite, memRead;
         byte aluOP, aluSRC;
     };
-
-    word signExtend_16(word imm, byte bits)
-    {
-        word mask = (1u << bits) - 1;
-        imm &= mask;
-
-        word sign_bits = 1u << (bits - 1);
-
-        return (imm ^ sign_bits) - sign_bits;
-    }
 
     ControlSignals signalGenerator(const byte &type, const byte &subOp)
     {

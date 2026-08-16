@@ -90,7 +90,7 @@ namespace risc
             ifidNext = ifStage.run(btb, pc, ras, decOut.mismatch, stall, imem);
 
             // Save cuurent pc for BTB update
-            word bracnhPc = ifidCurr.pc;
+            word branchPc = ifidCurr.pc;
 
             // Refer to line 277, function risc::CPU::run.
             if (debugTrace)
@@ -118,7 +118,7 @@ namespace risc
                 memwbCurr = memwbNext;
 
                 if (decOut.updateBTB)
-                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1, decOut.branchType);
+                    btb.update(branchPc, decOut.targetAdress, decOut.counter, 1);
             }
             else
             {
@@ -130,7 +130,7 @@ namespace risc
                 memwbCurr = memwbNext;
 
                 if (decOut.updateBTB)
-                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1, decOut.branchType);
+                    btb.update(branchPc, decOut.targetAdress, decOut.counter, 1);
             }
 
             if (debugTraceInline)
@@ -144,10 +144,11 @@ namespace risc
                 halted = true;
 
             lastPc = pc;
-            // Advance PC to PC_NEXT
+
             // DO NOT
-            // std::cout <<" cycle: " << cycle << '\n';
             // regs.dump();
+
+            // Advance PC to PC_NEXT
             pc = pcNext;
         }
 

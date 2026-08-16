@@ -92,11 +92,10 @@ public:
         returnResult.predictedTaken = counterMSB && returnResult.HIT;
         returnResult.counter = row.counter;
         returnResult.valid = row.valid;
-        returnResult.branchType = row.branchType;
         return returnResult;
     }
 
-    void update(word currentPC, word calculatedTarget, byte calculatedCounter, byte validBit, byte branchType)
+    void update(word currentPC, word calculatedTarget, byte calculatedCounter, byte validBit)
     {
         word pcCurrentUpper = (currentPC >> 5) & 0x7FF;
         word pcCurrentLower = currentPC & 0b11111;
@@ -105,7 +104,6 @@ public:
         row.pcUpperBTB = pcCurrentUpper;
         row.counter = calculatedCounter;
         row.valid = validBit;
-        row.branchType = branchType;
         return;
     }
 };
@@ -116,28 +114,24 @@ class ReturnAddrStack
 public:
     ReturnAddrStack() { stack.fill(0); }
 
-    byte push(const word &pcNext, word instruction)
+    byte push(const word &pcNext)
     {
         ptr = (ptr + 1) & RAS_DEPTH - 1;
         stack[ptr] = pcNext;
-       // std::cout << "Pushed, PTR: " << (int)ptr << "  Value: " << pcNext << "\n";
-       // std::cout << "Called by PC: " << (int)instruction << "\n";   
+
         return ptr;
     }
 
-    byte pop(word &predictedPc, word instruction)
+    byte pop(word &predictedPc)
     {
         predictedPc = stack[ptr];
         ptr = (ptr - 1) & RAS_DEPTH - 1;
-           //     std::cout << "Popped, PTR: " << (int)ptr << "  Value: " << predictedPc <<"\n"; 
-            //    std::cout << "Called by PC: " << (int)instruction << "\n"; 
+
         return ptr;
     }
 
     void ptrUpdate(byte &correctedPtr)
     {
-
-        // std::cout << "ptr corrected by DEC from: " << (int)ptr << " to: " << (int)correctedPtr << "\n";
         ptr = correctedPtr;
     }
 
