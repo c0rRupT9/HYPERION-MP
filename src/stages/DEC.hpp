@@ -28,7 +28,7 @@ Tag Sub     Instr   hex   bin(16b)
 10  100       BEQ   0800   0000100000000000
 10  101       BLT   0800   0000100000000000
 10  110     STORE   0042   0000000001000010
-10  111  RES(SB7)   0000   0000000000000000
+10  111      HALT   4000   0100000000000000
 11  000       JAL   121b   0001001000011011
 11  001       LUI   0219   0000001000011001
 11  010      MOVI   021a   0000001000011010
@@ -38,8 +38,8 @@ Tag Sub     Instr   hex   bin(16b)
 11  110   RES(J6)   0000   0000000000000000
 11  111   RES(J7)   0000   0000000000000000
 */
-
-static const std::array<word, 32> decoderROM = {0x0, 0x200, 0x204, 0x208, 0x20c, 0x210, 0x214, 0x0, 0x0,
+// Halt is not explicitly encoded here rather CPU is trapped into infinite loops for this purpose
+inline constexpr std::array<word, 32> decoderROM = {0x0, 0x200, 0x204, 0x208, 0x20c, 0x210, 0x214, 0x0, 0x0,
                                                 0x202, 0x206, 0x20a, 0x20e, 0x622, 0x216, 0x121b, 0x800,
                                                 0x800, 0x800, 0x800, 0x800, 0x800, 0x42, 0x0, 0x121b, 0x219,
                                                 0x21a, 0x20c2, 0x6be, 0x0, 0x0, 0x0};
@@ -76,7 +76,7 @@ public:
         bool usesRS2 = false;
     };
 
-    InstructionDecode decoder(const word &instr)
+    InstructionDecode decoder(const word instr)
     {
         InstructionDecode dec;
         dec.rawValue = instr;
@@ -125,7 +125,7 @@ public:
         return dec;
     }
 
-    word signExtend_16(word imm, byte bits)
+    static word signExtend_16(word imm, byte bits)
     {
         word mask = (1u << bits) - 1;
         imm &= mask;
@@ -135,7 +135,7 @@ public:
         return (imm ^ sign_bits) - sign_bits;
     }
 
-    Output run(const IFID_REG &ifid, ForwardResult &EXMEM_FOR, const ForwardResult &MEMWB_FOR,
+    Output run(const IFID_REG &ifid, const ForwardResult &EXMEM_FOR, const ForwardResult &MEMWB_FOR,
                const RegisterFile &registerFile)
     {
         Output idout;
@@ -181,7 +181,6 @@ public:
 
         if (signals.isBranch || signals.isJump)
         {
-            if (signals.isBranch)
                 idout.updateBTB = true;
 
             // BTB comparison Logic
@@ -240,7 +239,7 @@ private:
         byte aluOP, aluSRC;
     };
 
-    ControlSignals signalGenerator(const byte &type, const byte &subOp)
+    ControlSignals signalGenerator(byte type, byte subOp)
     {
         // Control Signal uses a constant array representing a ROM with instructions
         ControlSignals ctrl{};
@@ -263,37 +262,30 @@ private:
         return ctrl;
     }
 
-    bool BranchComp(const word &RS1_Val, const word &RS2_Val, const byte &subOp)
+    bool BranchComp(word RS1_Val, word RS2_Val, byte subOp)
     {
         switch (subOp)
         {
         case 0:
             return (RS1_Val > RS2_Val);
-            break;
 
         case 1:
             return (RS1_Val != RS2_Val);
-            break;
 
         case 2:
             return (RS1_Val < RS2_Val);
-            break;
 
         case 3:
             return (int16_t)RS1_Val > (int16_t)RS2_Val;
-            break;
 
         case 4:
             return (RS1_Val == RS2_Val);
-            break;
 
         case 5:
             return (int16_t)RS1_Val < (int16_t)RS2_Val;
-            break;
 
         default:
             return false;
-            break;
         }
     }
 };

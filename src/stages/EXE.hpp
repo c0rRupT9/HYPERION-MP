@@ -8,7 +8,7 @@ class EX
 {
 
 
-    word ALU (const word& a, const word& b, const byte& aluOp)
+    word ALU (word a, word b, byte aluOp)
     {
         word res;
         switch(aluOp)

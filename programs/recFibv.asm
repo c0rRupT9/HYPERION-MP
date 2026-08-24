@@ -30,7 +30,7 @@ MAIN:
 
 MAIN_LOOP:
     ; Exit check: if i == 11, jump to DONE
-    ADDI    R4, R0, 11        ; Use MOVI for depth > 15 
+    MOVI    R4, 21        ; Use MOVI for depth > 15 
     BEQ     R2, R4, DONE      ; Exit loop after processing i = 10
 
     ; 2. Call FIB(i)

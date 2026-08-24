@@ -72,7 +72,6 @@ class BTB
         word predictedTarget;
         word pcUpperBTB;
         byte counter;
-        byte branchType;
     };
 
     std::array<btbRow, BTB_SIZE> rows = {0};
@@ -114,7 +113,7 @@ class ReturnAddrStack
 public:
     ReturnAddrStack() { stack.fill(0); }
 
-    byte push(const word &pcNext)
+    byte push(word pcNext)
     {
         ptr = (ptr + 1) & RAS_DEPTH - 1;
         stack[ptr] = pcNext;

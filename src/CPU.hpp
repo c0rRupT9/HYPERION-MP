@@ -92,6 +92,11 @@ namespace risc
             // Save cuurent pc for BTB update
             word branchPc = ifidCurr.pc;
 
+            decOut.mismatch = decOut.mismatch & !stall; // Prevents false flushes in real systems Stall overrides everything
+            // in logisim a priority encoder and a priority MUX encodes it 
+            // this golden model mimics that property even though it will work just fine without it
+
+            
             // Refer to line 277, function risc::CPU::run.
             if (debugTrace)
                 trace.record(ifidCurr.instruction, stall, decOut.mismatch);

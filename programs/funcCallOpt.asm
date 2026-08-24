@@ -30,7 +30,7 @@ funcy:
 funcz:
     PUSH R6
     JAL R6, funca
-    POP R6
+    POP R6 ; -> PC + 1
     ADD R1, R1, R0
     MOVI R5, 0           
     JALR R0, R6, 0      

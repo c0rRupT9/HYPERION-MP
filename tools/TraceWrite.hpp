@@ -55,6 +55,8 @@ public:
         return (fs::path(dir) / (std::string(buf) + ext)).string();
     }
 
+
+
     // Call once per clock cycle, right after DEC latches this cycle's values.
     // stall: DEC/EX stall signal this cycle.
     // flush: IF/DEC flush signal this cycle.
@@ -88,6 +90,44 @@ public:
             out << "\n";
         }
     }
+
+    static std::vector<word> loadHexFile(std::string &filename)
+{
+    std::vector<word> program;
+    std::ifstream file(filename);
+
+    if (!file.is_open())
+    {
+        std::cerr << "Error: Could not open file '" << filename << "'\n";
+        exit(1);
+    }
+
+    std::string line;
+    int lineNumber = 0;
+
+    while (std::getline(file, line))
+    {
+        lineNumber++;
+        std::stringstream ss(line);
+        std::string token;
+        while (ss >> token)
+        {
+            try
+            {
+
+                unsigned long val = std::stoul(token, nullptr, 16);
+                program.push_back(static_cast<word>(val));
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "Warning: Invalid hex token '" << token
+                          << "' at line " << lineNumber << " - skipping.\n";
+            }
+        }
+    }
+
+    return program;
+}
 
     static std::string dumpBtb(const BTB &btb)
     {
@@ -158,8 +198,8 @@ public:
         return oss.str();
     }
 
-    std::string dumpTrace(size_t &cycle, const bool &stall, IDEX_REG &idexCurr,
-                                 const IFID_REG &ifidCurr, const EXMEM_REG &exmemCurr, const word &pc, const word& instrction)
+    std::string dumpTrace(size_t &cycle, bool stall, IDEX_REG &idexCurr,
+                                 const IFID_REG &ifidCurr, const EXMEM_REG &exmemCurr, word pc, word instrction)
     {
         std::ostringstream oss;
         oss << "--- CYCLE " << std::setw(2) << cycle
