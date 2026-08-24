@@ -49,7 +49,7 @@ namespace risc
             bool loadUseStall = false;
 
             // Helper: verify destination is non-zero and matches source registers
-            auto matches_rs = [&](uint8_t rd)
+            auto matches_rs = [&](uint8_t rd) noexcept
             {
                 return (rd != 0) && (((idexNext.RS1 == rd) && decOut.usesRS1) || ((idexNext.RS2 == rd) && decOut.usesRS2));
             };
@@ -96,7 +96,7 @@ namespace risc
             // in logisim a priority encoder and a priority MUX encodes it 
             // this golden model mimics that property even though it will work just fine without it
 
-            
+
             // Refer to line 277, function risc::CPU::run.
             if (debugTrace)
                 trace.record(ifidCurr.instruction, stall, decOut.mismatch);

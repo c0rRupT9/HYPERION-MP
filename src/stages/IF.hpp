@@ -54,7 +54,7 @@ public:
     }
 
 private:
-    void preDecode(word instr, byte &opcode, byte &RD, byte &RS1, word &imm)
+    static void preDecode(word instr, byte &opcode, byte &RD, byte &RS1, word &imm)
     {
 
         opcode = (instr >> 11) & 0x1F;

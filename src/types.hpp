@@ -106,6 +106,8 @@ struct HazardResult
 };
 
 // Results Forwarded from EXMEM, MEMWB registers.
+// Results are globally announced to each each stage, each cycle every stage compares these values
+// selects if they need the value
 struct ForwardResult
 {
     byte RD;

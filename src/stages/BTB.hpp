@@ -142,5 +142,5 @@ public:
 
 private:
     std::array<word, RAS_DEPTH> stack;
-    byte ptr = -1;
+    int8_t ptr = -1;
 };

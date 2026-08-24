@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
         std::cerr << "Provided file is Empty.\n";
         return 1;
     }
+    
     risc::CPU cpu;
     cpu.loadProgram(program);
     cpu.run(conf.cycles);
