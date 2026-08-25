@@ -186,11 +186,12 @@ namespace risc
                 trace.write(trace.next_numbered_path("../hexTraces"));
             }
 
-            regs.dump();
-            std::cout << trace.dumpBtb(btb);
-            std::cout << trace.dumpMem(dmem);
-            ras.dump();
-
+            std::string finalLog;
+             finalLog += regs.dump();
+             finalLog += trace.dumpBtb(btb);
+             finalLog += trace.dumpMem(dmem);
+             finalLog += ras.dump();
+            std::cout << finalLog;
             std::cout << " Final PC: " << pc << std::endl;
         }
     };

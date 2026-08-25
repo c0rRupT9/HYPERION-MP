@@ -188,11 +188,11 @@ public:
 
         oss += "--- CYCLE ";
         char numBuf[16];
-        auto [p1, __ec] = std::to_chars(numBuf, numBuf + sizeof(numBuf), cycle);
+        auto [p1, _] = std::to_chars(numBuf, numBuf + sizeof(numBuf), cycle);
         oss.append(numBuf, p1 - numBuf);
 
         oss += " [PC=";
-        auto [p2, __ec] = std::to_chars(numBuf, numBuf + sizeof(numBuf), pc);
+        auto [p2, __] = std::to_chars(numBuf, numBuf + sizeof(numBuf), pc);
         oss.append(numBuf, p2 - numBuf);
         oss += "] ";
         if (stall)

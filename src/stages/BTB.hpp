@@ -57,10 +57,32 @@ public:
         pendingNormal = pendingSP = false;
     }
 
-    void dump() const
+    std::string dump() const
     {
+        // Static buffer holds all 8 formatted register lines 
+        static char buf[256];
+
+        char *ptr = buf;
+        char *const end = buf + sizeof(buf);
+
         for (int i = 0; i < 8; i++)
-            printf("  R%d = %d (0x%04X)\n", i, (int16_t)regs[i], regs[i]);
+        {
+            uint16_t u_val = (uint16_t)(regs[i]);
+            int16_t s_val = (int16_t)(regs[i]);
+
+            // snprintf returns characters written; offset pointer directly
+            int written = std::snprintf(ptr, end - ptr, "  R%d = %-6d (0x%04X)\n", i, s_val, u_val);
+            if (written > 0 && ptr + written < end)
+            {
+                ptr += written;
+            }
+            else
+            {
+                break; // Guard against buffer overflow
+            }
+        }
+
+        return std::string_view(buf, ptr - buf).data();
     }
 };
 
@@ -134,10 +156,31 @@ public:
         ptr = correctedPtr;
     }
 
-    void dump() const
+    std::string dump() const
     {
+        // Static buffer holds all 8 formatted register lines 
+        static char buf[256];
+
+        char *ptr = buf;
+        char *const end = buf + sizeof(buf);
+
         for (int i = 0; i < 8; i++)
-            printf("  S%d = %d (0x%04X)\n", i, stack[i], stack[i]);
+        {
+            uint16_t u_val = (uint16_t)(stack[i]);
+
+            // snprintf returns characters written; offset pointer directly
+            int written = std::snprintf(ptr, end - ptr, "  Srack%d = %-6d (0x%04X)\n", i, u_val);
+            if (written > 0 && ptr + written < end)
+            {
+                ptr += written;
+            }
+            else
+            {
+                break; // Guard against buffer overflow
+            }
+        }
+
+        return std::string_view(buf, ptr - buf).data();
     }
 
 private:
