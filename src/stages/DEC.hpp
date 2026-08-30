@@ -1,5 +1,4 @@
 // Decoder Stage
-
 #pragma once
 
 // Instruction Structure in DECROM
@@ -88,7 +87,7 @@ public:
 
         switch (dec.tag)
         {
-        case 0b00:
+        case R_TYPE:
         {
             dec.imm = 0;
             dec.usesRS1 = true;
@@ -96,14 +95,14 @@ public:
             break;
         }
 
-        case 0b01:
+        case I_TYPE:
         {
             dec.imm = signExtend_16(instr & 0x1F, 5);
             dec.usesRS1 = true;
             break;
         }
 
-        case 0b10:
+        case SB_TYPE:
         {
             byte immHI = (instr >> 8) & 0x7;
             byte immLO = instr & 0b11;
@@ -113,7 +112,7 @@ public:
             break;
         }
 
-        case 0b11:
+        case J_TYPE:
         {
             dec.imm = signExtend_16(instr & 0xFF, 8);
             dec.usesRS1 = false;
@@ -149,7 +148,7 @@ public:
 
         if (signals.spType)
         {
-            decode.RS1 = 7;
+            decode.RS1 = SP;
         } // If load is loading SP then we need to stall
         // so declare the values before hand we can forward SP or read in EXEC unit.
         // Since we wont be branching using SP we can forward it in EXEC unit only.
@@ -163,7 +162,7 @@ public:
         idout.usesRS1 = decode.usesRS1;
         idout.usesRS2 = (signals.spSel) ? true : decode.usesRS2; // Since PUSH uses RD as RS2
 
-        if (decode.RS1 != 0)
+        if (decode.RS1 != R0)
         {
             if (decode.RS1 == EXMEM_FOR.RD && EXMEM_FOR.regWrite)
                 RS1_Val = EXMEM_FOR.value;
@@ -171,7 +170,7 @@ public:
                 RS1_Val = MEMWB_FOR.value;
         }
 
-        if (decode.RS2 != 0)
+        if (decode.RS2 != R0)
         {
             if (decode.RS2 == EXMEM_FOR.RD && EXMEM_FOR.regWrite)
                 RS2_Val = EXMEM_FOR.value;
@@ -184,11 +183,11 @@ public:
                 idout.updateBTB = true;
 
             // BTB comparison Logic
-            idout.actualTaken = (signals.isBranch) ? BranchComp(RS1_Val, RS2_Val, decode.subOp) : true;
-            idout.isBranchOrJalr = (signals.isBranch || (signals.isJump && (decode.tag == 0b01))) ? true : false;
+            idout.actualTaken = (signals.isBranch) ? BranchComp(RS1_Val, RS2_Val, (BranchCond)decode.subOp) : true;
+            idout.isBranchOrJalr = (signals.isBranch || (signals.isJump && (decode.tag == I_TYPE))) ? true : false;
             // Offset calculation
-            //  Include JALR case where type is 0b01 while it is a jump but instead of PC use RS1
-            idout.targetAdress = (signals.isJump && (decode.tag == 0b01)) ? RS1_Val + decode.imm : ifid.pc + decode.imm;
+            //  Include JALR case where type is 0b1 while it is a jump but instead of PC use RS1
+            idout.targetAdress = (signals.isJump && (decode.tag == I_TYPE)) ? RS1_Val + decode.imm : ifid.pc + decode.imm;
             idout.targetPc = (idout.actualTaken) ? idout.targetAdress : ifid.pc + 1;
 
             // counter update logic
@@ -231,6 +230,7 @@ public:
     }
 
 private:
+
     struct ControlSignals
     {
         // There are a total of 14 control Signals some will be forwarded to other stages while three of them will
@@ -248,40 +248,40 @@ private:
 
         // NOTE: There are exactly 2 padding Bits on the MSB side, we will shift in regard to that
 
-        ctrl.spSel = (signals >> 13) & 0b1;
-        ctrl.isJump = (signals >> 12) & 0b1;
-        ctrl.isBranch = (signals >> 11) & 0b1;
-        ctrl.memToReg = (signals >> 10) & 0b1;
-        ctrl.regWrite = (signals >> 9) & 0b1;
-        ctrl.spType = (signals >> 7) & 0b1;
-        ctrl.memWrite = (signals >> 6) & 0b1;
-        ctrl.memRead = (signals >> 5) & 0b1;
-        ctrl.aluOP = (signals >> 2) & 0x7;
-        ctrl.aluSRC = signals & 0b11;
+        ctrl.spSel =    (signals >> 13) & 1;
+        ctrl.isJump =   (signals >> 12) & 1;
+        ctrl.isBranch = (signals >> 11) & 1;
+        ctrl.memToReg = (signals >> 10) & 1;
+        ctrl.regWrite = (signals >> 9)  & 1;
+        ctrl.spType =   (signals >> 7)  & 1;
+        ctrl.memWrite = (signals >> 6)  & 1;
+        ctrl.memRead =  (signals >> 5)  & 1;
+        ctrl.aluOP =    (signals >> 2)  & 0b111;
+        ctrl.aluSRC =    signals        & 3;
 
         return ctrl;
     }
 
-    bool BranchComp(word RS1_Val, word RS2_Val, byte subOp)
+    bool BranchComp(word RS1_Val, word RS2_Val, BranchCond cond)
     {
-        switch (subOp)
+        switch (cond)
         {
-        case 0:
+        case BranchCond::BGEU:
             return (RS1_Val > RS2_Val);
 
-        case 1:
+        case BranchCond::BNE:
             return (RS1_Val != RS2_Val);
 
-        case 2:
+        case BranchCond::BLU:
             return (RS1_Val < RS2_Val);
 
-        case 3:
+        case BranchCond::BGE:
             return (int16_t)RS1_Val > (int16_t)RS2_Val;
 
-        case 4:
+        case BranchCond::BEQ:
             return (RS1_Val == RS2_Val);
 
-        case 5:
+        case BranchCond::BLT:
             return (int16_t)RS1_Val < (int16_t)RS2_Val;
 
         default:

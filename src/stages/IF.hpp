@@ -25,21 +25,28 @@ public:
 
         if (!stall && !flush)
         {
-            if (opcode == 0x18 && !ifid.btbHit) // Invoke only on very first appearance of JAL later handled by BTB
+            if (opcode == JAL && !ifid.btbHit) // Invoke only on very first appearance of JAL later handled by BTB
             {
                 ifid.predictedTaken = true;
                 ifid.predictedTarget = ifid.pc + imm;
             }
 
-            if (opcode == 0xF && RS1 == 6)
+            bool isRasPop = (opcode == JALR && RS1 == JAX);
+            bool isRasPush = ((opcode == JAL || opcode == JALR) && RD == JAX);
+
+            // 2. Execute POP logic if applicable
+            if (isRasPop)
             {
                 rasPtr = ras.pop(ifid.predictedTarget);
                 ifid.predictedTaken = true;
                 ifid.rasPOP = true;
-            } // R6 is jax
+            }
 
-            else if (opcode == 0x18 && RD == 6)
+            // 3. Execute PUSH logic if applicable (Can happen in the same cycle as POP)
+            if (isRasPush)
+            {
                 rasPtr = ras.push(ifid.pc + 1);
+            }
         }
 
         // Incase prediction is correct DEC will assume PC is set by IF stage.

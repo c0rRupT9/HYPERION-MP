@@ -2,7 +2,6 @@
 #pragma once
 
 
-
 class MEM
 {
     public:
@@ -12,7 +11,7 @@ class MEM
         byte RS2 = exmem.RS2;
         word RS2_VAL = exmem.storeValue;
 
-        if(MEMWB_FOR.RD == RS2 && MEMWB_FOR.RD != 0 && MEMWB_FOR.regWrite)
+        if(MEMWB_FOR.RD == RS2 && MEMWB_FOR.RD != R0 && MEMWB_FOR.regWrite)
         {
             RS2_VAL = MEMWB_FOR.value;
         }

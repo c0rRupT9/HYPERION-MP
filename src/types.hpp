@@ -14,6 +14,34 @@ static constexpr int MEM_SIZE = 65536;
 inline bool debugTrace;
 inline bool debugTraceInline;
 
+enum Instr : byte
+{
+    NOP, ADD, MUL, XOR, AND, OR, SLT, RES_R1,
+    RES_I1, ADDI, MULI, XORI, ANDI, LOAD, SLTI,
+    JALR, BGEU, BNE, BLU, BGE, BEQ, BLT, STORE,
+    RES_SB1, JAL, LUI, MOVI, PUSH, POP, RES_J1, RES_J2, RES_J3
+};
+
+enum Regs : byte
+{
+    R0, R1, R2, R3, R4, R5, JAX, SP
+};
+
+enum Types : byte
+{
+    R_TYPE, I_TYPE, SB_TYPE, J_TYPE
+};
+
+enum AluOp : byte
+{
+    ALU_ADD, ALU_MUL, ALU_XOR, ALU_AND, ALU_OR, ALU_SLT, PASSTHROUGH, ALU_SUB
+};
+
+enum class BranchCond : byte
+{
+    BGEU, BNE, BLU, BGE, BEQ, BLT
+};
+
 // Includes values returned by BTB
 struct BTB_RET
 {
