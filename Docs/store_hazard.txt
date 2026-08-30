@@ -1,0 +1,62 @@
+===================================================================
+HYPERION-MP: HAZARD RESOLUTION & FORWARDING SPECIFICATION
+===================================================================
+
+1. UPDATED FORWARDING PATHS
+-------------------------------------------------------------------
+- EX/MEM -> ID/EX & IF/ID : Forwards standard ALU results before MEM.
+- MEM/WB -> EX/MEM & IF/ID : Dedicated bypass for memory-to-memory
+                             writeback forwarding.
+
+
+2. LOAD-STORE AND POP-PUSH HAZARDS
+-------------------------------------------------------------------
+[PROBLEM]
+Previously, a STORE (or PUSH) immediately following a LOAD (or POP)
+required a 1-cycle stall because loaded data was not ready in the EX
+stage for the store payload register.
+
+[SOLUTION]
+A STORE instruction does not need its payload data until the MEM stage.
+Data is forwarded from MEM/WB directly into the EX/MEM pipeline register
+during the cycle the STORE transitions from EX to MEM.
+
+Result: 0-stall memory forwarding for LOAD -> STORE and POP -> PUSH.
+
+[PIPELINE SCHEDULE]
+Cycle 1: LOAD  [IF]
+Cycle 2: LOAD  [ID]  | STORE [IF]
+Cycle 3: LOAD  [EX]  | STORE [ID]
+Cycle 4: LOAD  [MEM] | STORE [EX]  <- Data ready in MEM/WB
+Cycle 5: LOAD  [WB]  | STORE [MEM] <- Forwarded MEM/WB -> EX/MEM
+
+
+3. DISAMBIGUATING FALSE HAZARDS (RS1 vs RS2)
+-------------------------------------------------------------------
+For STORE instructions:
+- RS1 : Base address register (needed in EX for address calculation).
+- RS2 : Store payload register (needed in MEM for memory write).
+
+[CASE 1: Load.RD == Store.RS1] (True Hazard)
+The STORE needs the loaded value in EX to calculate the address.
+Action: Trigger 1-cycle Load-Use stall.
+
+[CASE 2: Load.RD == Store.RS2] (False Hazard)
+The STORE only needs the loaded value as a payload to write to memory.
+Action: 0 Stalls. Allow STORE to proceed to EX, then forward data
+        from MEM/WB to EX/MEM.storeValue on the next cycle.
+
+
+4. DEBUG POST-MORTEM
+-------------------------------------------------------------------
+[ISSUE]
+Register data corruption occurred during store forwarding despite
+correct hazard detection logic.
+
+[ROOT CAUSE]
+exmem.storeValue was assigned to a 'byte' type instead of 'word',
+causing upper-byte truncation during RS2_value forwarding.
+
+[FIX]
+Corrected declaration to: word RS2_value;
+===================================================================

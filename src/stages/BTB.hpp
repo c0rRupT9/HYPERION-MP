@@ -5,8 +5,8 @@
 #include <array>
 #include <cstdio>
 
-
 const size_t BTB_SIZE = 32;
+const size_t RAS_DEPTH = 8;
 
 // ============================== Register file ==============================
 // 8 GPRs. R0 hardwired zero. R7 = SP, with its OWN dedicated write port
@@ -48,7 +48,6 @@ public:
         pendingSPVal = value;
     }
 
-
     void commit()
     {
         if (pendingNormal)
@@ -58,10 +57,32 @@ public:
         pendingNormal = pendingSP = false;
     }
 
-    void dump() const
+    std::string dump() const
     {
+        // Static buffer holds all 8 formatted register lines 
+        static char buf[256];
+
+        char *ptr = buf;
+        char *const end = buf + sizeof(buf);
+
         for (int i = 0; i < 8; i++)
-            printf("  R%d = %d (0x%04X)\n", i, (int16_t)regs[i], regs[i]);
+        {
+            uint16_t u_val = (uint16_t)(regs[i]);
+            int16_t s_val = (int16_t)(regs[i]);
+
+            // snprintf returns characters written; offset pointer directly
+            int written = std::snprintf(ptr, end - ptr, "  R%d = %-6d (0x%04X)\n", i, s_val, u_val);
+            if (written > 0 && ptr + written < end)
+            {
+                ptr += written;
+            }
+            else
+            {
+                break; // Guard against buffer overflow
+            }
+        }
+
+        return std::string_view(buf, ptr - buf).data();
     }
 };
 
@@ -92,7 +113,6 @@ public:
         returnResult.predictedTaken = counterMSB && returnResult.HIT;
         returnResult.counter = row.counter;
         returnResult.valid = row.valid;
-
         return returnResult;
     }
 
@@ -107,4 +127,63 @@ public:
         row.valid = validBit;
         return;
     }
+};
+
+class ReturnAddrStack
+{
+
+public:
+    ReturnAddrStack() { stack.fill(0); }
+
+    byte push(word pcNext)
+    {
+        ptr = (ptr + 1) & RAS_DEPTH - 1;
+        stack[ptr] = pcNext;
+
+        return ptr;
+    }
+
+    byte pop(word &predictedPc)
+    {
+        predictedPc = stack[ptr];
+        ptr = (ptr - 1) & RAS_DEPTH - 1;
+
+        return ptr;
+    }
+
+    void ptrUpdate(byte &correctedPtr)
+    {
+        ptr = correctedPtr;
+    }
+
+    std::string dump() const
+    {
+        // Static buffer holds all 8 formatted register lines 
+        static char buf[256];
+
+        char *ptr = buf;
+        char *const end = buf + sizeof(buf);
+
+        for (int i = 0; i < 8; i++)
+        {
+            uint16_t u_val = (uint16_t)(stack[i]);
+
+            // snprintf returns characters written; offset pointer directly
+            int written = std::snprintf(ptr, end - ptr, "  Srack%d = %-6d (0x%04X)\n", i, u_val);
+            if (written > 0 && ptr + written < end)
+            {
+                ptr += written;
+            }
+            else
+            {
+                break; // Guard against buffer overflow
+            }
+        }
+
+        return std::string_view(buf, ptr - buf).data();
+    }
+
+private:
+    std::array<word, RAS_DEPTH> stack;
+    int8_t ptr = -1;
 };

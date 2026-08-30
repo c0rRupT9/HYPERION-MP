@@ -4,7 +4,7 @@
 ;   0x0100 (256) -> Stack Pointer Base (R7)
 ;   0x0200 (512) -> Output RAM Base Address (R3)
 ; Uses CPU native ISA PUSH and POP based Rec Fib reducing payload by 1000 
-; cycles used = 5538
+; cycles used = 5538 diff after ras 220
 ; =======================================================================
 
 ; ========================================================================
@@ -30,7 +30,7 @@ MAIN:
 
 MAIN_LOOP:
     ; Exit check: if i == 11, jump to DONE
-    ADDI    R4, R0, 11        ; Use MOVI for depth > 15 
+    MOVI    R4, 21        ; Use MOVI for depth > 15 
     BEQ     R2, R4, DONE      ; Exit loop after processing i = 10
 
     ; 2. Call FIB(i)

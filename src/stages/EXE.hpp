@@ -2,39 +2,37 @@
 
 #pragma once
 
-
-
 class EX
 {
 
 
-    word ALU (const word& a, const word& b, const byte& aluOp)
+    word ALU (word a, word b, byte aluOp)
     {
         word res;
         switch(aluOp)
         {
-            case 0:
+            case ALU_ADD:
                 res = a + b;
                 break;
-            case 1:
+            case ALU_MUL:
                 res =  a * b;
                 break;
-            case 2:
+            case ALU_XOR:
                 res = a ^ b;
                 break;
-            case 3:
+            case ALU_AND:
                 res = a & b;
                 break;
-            case 4:
+            case ALU_OR:
                 res = a | b;
                 break;
-            case 5: 
+            case ALU_SLT: 
                 res = (int16_t)a < (int16_t)b ? 1 : 0;
                 break;
-            case 6:
+            case PASSTHROUGH:
                 res = b;
                 break;
-            case 7:
+            case ALU_SUB:
                 res = a - b;
                 break;
         }
@@ -59,11 +57,11 @@ class EX
         // mention SP register in any way we need to make special Ammends and look spType signals in MEM and WB units.
 
 
-        if(idex.spType) {RS1Value = SP;}  // Register 7 is SP register 
+        if(idex.spType) {RS1Value = SP;}  // Register 7 is SP register NOTE this is not an enum type but direct output of regfile 
          // MEM unit can store DMEM output or ALU_output into GPR but for SP we only need
         // ALU_OUT since the new SP was calculated by ALU while POP stores two values at the same time.
 
-        if(RS1Tag != 0)
+        if(RS1Tag != R0)
         {
             if((RS1Tag == EXMEM_FOR.RD && EXMEM_FOR.regWrite) || RS1Tag == 7 && EXMEM_FOR.spWrite)
             RS1Value = EXMEM_FOR.value;
@@ -74,7 +72,7 @@ class EX
 
         }
 
-        if(RS2Tag != 0)
+        if(RS2Tag != R0)
         {
             if((RS2Tag == EXMEM_FOR.RD && EXMEM_FOR.regWrite) || RS2Tag == 7 && EXMEM_FOR.spWrite)
             RS2Value = EXMEM_FOR.value;

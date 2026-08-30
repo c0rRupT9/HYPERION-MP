@@ -59,43 +59,6 @@ Config parse(int argc, char *argv[])
     return conf;
 }
 
-std::vector<word> loadHexFile(const std::string &filename)
-{
-    std::vector<word> program;
-    std::ifstream file(filename);
-
-    if (!file.is_open())
-    {
-        std::cerr << "Error: Could not open file '" << filename << "'\n";
-        exit(1);
-    }
-
-    std::string line;
-    int lineNumber = 0;
-
-    while (std::getline(file, line))
-    {
-        lineNumber++;
-        std::stringstream ss(line);
-        std::string token;
-        while (ss >> token)
-        {
-            try
-            {
-
-                unsigned long val = std::stoul(token, nullptr, 16);
-                program.push_back(static_cast<word>(val));
-            }
-            catch (const std::exception &e)
-            {
-                std::cerr << "Warning: Invalid hex token '" << token
-                          << "' at line " << lineNumber << " - skipping.\n";
-            }
-        }
-    }
-
-    return program;
-}
 
 int main(int argc, char *argv[])
 {
@@ -110,12 +73,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::vector<word> program = loadHexFile(conf.input);
+    std::vector<word> program = TraceWriter::loadHexFile(conf.input);
     if (program.empty())
     {
         std::cerr << "Provided file is Empty.\n";
         return 1;
     }
+    
     risc::CPU cpu;
     cpu.loadProgram(program);
     cpu.run(conf.cycles);

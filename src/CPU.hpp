@@ -24,6 +24,7 @@ namespace risc
         MEMWB_REG memwbCurr{}, memwbNext{};
         BTB btb;
         RegisterFile regs;
+        ReturnAddrStack ras;
 
         IF ifStage;
         ID idStage;
@@ -48,12 +49,12 @@ namespace risc
             bool loadUseStall = false;
 
             // Helper: verify destination is non-zero and matches source registers
-            auto matches_rs = [&](uint8_t rd)
+            auto matches_rs = [&](uint8_t rd) noexcept
             {
                 return (rd != 0) && (((idexNext.RS1 == rd) && decOut.usesRS1) || ((idexNext.RS2 == rd) && decOut.usesRS2));
             };
             // STORE and PUSH cases will be evaluated by loadStoreStall
-            loadStoreStall = decOut.usesRS1 && (idexCurr.memRead && idexNext.RS1 == idexCurr.RD) && (idexCurr.RD != 0); 
+            loadStoreStall = decOut.usesRS1 && (idexCurr.memRead && idexNext.RS1 == idexCurr.RD) && (idexCurr.RD != 0);
             // Will invoke only when current instruction in DEC is not a STORE or PUSH
             loadUseStall = (idexCurr.memRead && matches_rs(idexCurr.RD)) && !decOut.isStore;
             result.branchArithStall = decOut.isBranchOrJalr && idexCurr.regWrite && matches_rs(idexCurr.RD);
@@ -86,10 +87,15 @@ namespace risc
             bool stall = result.stall;
 
             // IF Stage
-            ifidNext = ifStage.run(btb, pc, imem);
+            ifidNext = ifStage.run(btb, pc, ras, decOut.mismatch, stall, imem);
 
             // Save cuurent pc for BTB update
-            word bracnhPc = ifidCurr.pc;
+            word branchPc = ifidCurr.pc;
+
+            decOut.mismatch = decOut.mismatch & !stall; // Prevents false flushes in real systems Stall overrides everything
+            // in logisim a priority encoder and a priority MUX encodes it 
+            // this golden model mimics that property even though it will work just fine without it
+
 
             // Refer to line 277, function risc::CPU::run.
             if (debugTrace)
@@ -107,6 +113,8 @@ namespace risc
             }
             else if (decOut.mismatch)
             {
+                if (decOut.rasPtrUpdate)
+                    ras.ptrUpdate(decOut.correctedPtr);
                 // MISPREDICTION FLUSH: Update PC, Flush IF/ID
                 pcNext = decOut.targetPc;
                 ifidCurr = IFID_REG{}; // Flush IF/ID latch
@@ -115,7 +123,7 @@ namespace risc
                 memwbCurr = memwbNext;
 
                 if (decOut.updateBTB)
-                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1);
+                    btb.update(branchPc, decOut.targetAdress, decOut.counter, 1);
             }
             else
             {
@@ -127,7 +135,7 @@ namespace risc
                 memwbCurr = memwbNext;
 
                 if (decOut.updateBTB)
-                    btb.update(bracnhPc, decOut.targetAdress, decOut.counter, 1);
+                    btb.update(branchPc, decOut.targetAdress, decOut.counter, 1);
             }
 
             if (debugTraceInline)
@@ -142,10 +150,10 @@ namespace risc
 
             lastPc = pc;
 
-            // Advance PC to PC_NEXT
             // DO NOT
-            // std::cout <<" cycle: " << cycle << '\n'; 
             // regs.dump();
+
+            // Advance PC to PC_NEXT
             pc = pcNext;
         }
 
@@ -167,11 +175,9 @@ namespace risc
                     break;
             }
 
-
-
             // debugTrace is a global Declaration, if you dont require Debug Traces set it to false in TYPES_HPP
-            if(debugTraceInline)
-                std::cout << log; //logs
+            if (debugTraceInline)
+                std::cout << log; // logs
             if (debugTrace)
             {
                 // Either Create a log file or dump all the streams to terminal pointer
@@ -180,10 +186,12 @@ namespace risc
                 trace.write(trace.next_numbered_path("../hexTraces"));
             }
 
-            regs.dump();
-            std::cout << trace.dumpBtb(btb);
-            std::cout << trace.dumpMem(dmem);
-
+            std::string finalLog;
+             finalLog += regs.dump();
+             finalLog += trace.dumpBtb(btb);
+             finalLog += trace.dumpMem(dmem);
+             finalLog += ras.dump();
+            std::cout << finalLog;
             std::cout << " Final PC: " << pc << std::endl;
         }
     };

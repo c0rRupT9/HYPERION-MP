@@ -1,5 +1,4 @@
 // Decoder Stage
-
 #pragma once
 
 // Instruction Structure in DECROM
@@ -28,7 +27,7 @@ Tag Sub     Instr   hex   bin(16b)
 10  100       BEQ   0800   0000100000000000
 10  101       BLT   0800   0000100000000000
 10  110     STORE   0042   0000000001000010
-10  111  RES(SB7)   0000   0000000000000000
+10  111      HALT   4000   0100000000000000
 11  000       JAL   121b   0001001000011011
 11  001       LUI   0219   0000001000011001
 11  010      MOVI   021a   0000001000011010
@@ -38,8 +37,8 @@ Tag Sub     Instr   hex   bin(16b)
 11  110   RES(J6)   0000   0000000000000000
 11  111   RES(J7)   0000   0000000000000000
 */
-
-static const std::array<word, 32> decoderROM = {0x0, 0x200, 0x204, 0x208, 0x20c, 0x210, 0x214, 0x0, 0x0,
+// Halt is not explicitly encoded here rather CPU is trapped into infinite loops for this purpose
+inline constexpr std::array<word, 32> decoderROM = {0x0, 0x200, 0x204, 0x208, 0x20c, 0x210, 0x214, 0x0, 0x0,
                                                 0x202, 0x206, 0x20a, 0x20e, 0x622, 0x216, 0x121b, 0x800,
                                                 0x800, 0x800, 0x800, 0x800, 0x800, 0x42, 0x0, 0x121b, 0x219,
                                                 0x21a, 0x20c2, 0x6be, 0x0, 0x0, 0x0};
@@ -57,9 +56,10 @@ public:
         bool isStore = false;
         bool usesRS1 = false;
         bool usesRS2 = false;
+        bool rasPtrUpdate = false;
         word targetAdress = 0;
         word targetPc = 0;
-        byte counter = 0;
+        byte counter = 0, correctedPtr = 0;
     };
 
     struct InstructionDecode
@@ -75,8 +75,7 @@ public:
         bool usesRS2 = false;
     };
 
-
-    InstructionDecode decoder(const word &instr)
+    InstructionDecode decoder(const word instr)
     {
         InstructionDecode dec;
         dec.rawValue = instr;
@@ -88,7 +87,7 @@ public:
 
         switch (dec.tag)
         {
-        case 0b00:
+        case R_TYPE:
         {
             dec.imm = 0;
             dec.usesRS1 = true;
@@ -96,14 +95,14 @@ public:
             break;
         }
 
-        case 0b01:
+        case I_TYPE:
         {
             dec.imm = signExtend_16(instr & 0x1F, 5);
             dec.usesRS1 = true;
             break;
         }
 
-        case 0b10:
+        case SB_TYPE:
         {
             byte immHI = (instr >> 8) & 0x7;
             byte immLO = instr & 0b11;
@@ -113,7 +112,7 @@ public:
             break;
         }
 
-        case 0b11:
+        case J_TYPE:
         {
             dec.imm = signExtend_16(instr & 0xFF, 8);
             dec.usesRS1 = false;
@@ -125,7 +124,17 @@ public:
         return dec;
     }
 
-    Output run(const IFID_REG &ifid, ForwardResult &EXMEM_FOR, const ForwardResult &MEMWB_FOR,
+    static word signExtend_16(word imm, byte bits)
+    {
+        word mask = (1u << bits) - 1;
+        imm &= mask;
+
+        word sign_bits = 1u << (bits - 1);
+
+        return (imm ^ sign_bits) - sign_bits;
+    }
+
+    Output run(const IFID_REG &ifid, const ForwardResult &EXMEM_FOR, const ForwardResult &MEMWB_FOR,
                const RegisterFile &registerFile)
     {
         Output idout;
@@ -137,7 +146,10 @@ public:
         if (signals.spSel) // Push uses RS2 instead of RD
             decode.RS2 = decode.RD;
 
-        if(signals.spType) {decode.RS1 = 7;}  // If load is loading SP then we need to stall
+        if (signals.spType)
+        {
+            decode.RS1 = SP;
+        } // If load is loading SP then we need to stall
         // so declare the values before hand we can forward SP or read in EXEC unit.
         // Since we wont be branching using SP we can forward it in EXEC unit only.
         // If you really need to branch using SP use ADD then branch case.
@@ -148,9 +160,9 @@ public:
         // Forwarding from EXMEM and MEMWB with priority
         // if else if branches exit once matching contender is found
         idout.usesRS1 = decode.usesRS1;
-        idout.usesRS2 = (signals.spSel)? true : decode.usesRS2; // Since PUSH uses RD as RS2 
+        idout.usesRS2 = (signals.spSel) ? true : decode.usesRS2; // Since PUSH uses RD as RS2
 
-        if (decode.RS1 != 0)
+        if (decode.RS1 != R0)
         {
             if (decode.RS1 == EXMEM_FOR.RD && EXMEM_FOR.regWrite)
                 RS1_Val = EXMEM_FOR.value;
@@ -158,7 +170,7 @@ public:
                 RS1_Val = MEMWB_FOR.value;
         }
 
-        if (decode.RS2 != 0)
+        if (decode.RS2 != R0)
         {
             if (decode.RS2 == EXMEM_FOR.RD && EXMEM_FOR.regWrite)
                 RS2_Val = EXMEM_FOR.value;
@@ -168,14 +180,14 @@ public:
 
         if (signals.isBranch || signals.isJump)
         {
-            idout.updateBTB = true;
+                idout.updateBTB = true;
 
             // BTB comparison Logic
-            idout.actualTaken = (signals.isBranch) ? BranchComp(RS1_Val, RS2_Val, decode.subOp) : true;
-            idout.isBranchOrJalr = (signals.isBranch || (signals.isJump && (decode.tag == 0b01))) ? true : false;
+            idout.actualTaken = (signals.isBranch) ? BranchComp(RS1_Val, RS2_Val, (BranchCond)decode.subOp) : true;
+            idout.isBranchOrJalr = (signals.isBranch || (signals.isJump && (decode.tag == I_TYPE))) ? true : false;
             // Offset calculation
-            //  Include JALR case where type is 0b01 while it is a jump but instead of PC use RS1
-            idout.targetAdress = (signals.isJump && (decode.tag == 0b01)) ? RS1_Val + decode.imm : ifid.pc + decode.imm;
+            //  Include JALR case where type is 0b1 while it is a jump but instead of PC use RS1
+            idout.targetAdress = (signals.isJump && (decode.tag == I_TYPE)) ? RS1_Val + decode.imm : ifid.pc + decode.imm;
             idout.targetPc = (idout.actualTaken) ? idout.targetAdress : ifid.pc + 1;
 
             // counter update logic
@@ -194,6 +206,8 @@ public:
             bool branchMismatch = idout.actualTaken ^ ifid.predictedTaken;
             bool offsetMismatch = idout.actualTaken && ifid.predictedTaken && (ifid.predictedTarget != idout.targetAdress);
             idout.mismatch = (branchMismatch || offsetMismatch);
+            idout.rasPtrUpdate = offsetMismatch && ifid.rasPOP; // RAS update
+            idout.correctedPtr = ifid.rasPtr + 1;
         }
         idout.isStore = signals.memWrite; // Store Hazard Case Handling
         idout.nextIdex.ALUOp = signals.aluOP;
@@ -225,17 +239,7 @@ private:
         byte aluOP, aluSRC;
     };
 
-    word signExtend_16(word imm, byte bits)
-    {
-        word mask = (1u << bits) - 1;
-        imm &= mask;
-
-        word sign_bits = 1u << (bits - 1);
-
-        return (imm ^ sign_bits) - sign_bits;
-    }
-
-    ControlSignals signalGenerator(const byte &type, const byte &subOp)
+    ControlSignals signalGenerator(byte type, byte subOp)
     {
         // Control Signal uses a constant array representing a ROM with instructions
         ControlSignals ctrl{};
@@ -244,51 +248,44 @@ private:
 
         // NOTE: There are exactly 2 padding Bits on the MSB side, we will shift in regard to that
 
-        ctrl.spSel = (signals >> 13) & 0b1;
-        ctrl.isJump = (signals >> 12) & 0b1;
-        ctrl.isBranch = (signals >> 11) & 0b1;
-        ctrl.memToReg = (signals >> 10) & 0b1;
-        ctrl.regWrite = (signals >> 9) & 0b1;
-        ctrl.spType = (signals >> 7) & 0b1;
-        ctrl.memWrite = (signals >> 6) & 0b1;
-        ctrl.memRead = (signals >> 5) & 0b1;
-        ctrl.aluOP = (signals >> 2) & 0x7;
-        ctrl.aluSRC = signals & 0b11;
+        ctrl.spSel =    (signals >> 13) & 1;
+        ctrl.isJump =   (signals >> 12) & 1;
+        ctrl.isBranch = (signals >> 11) & 1;
+        ctrl.memToReg = (signals >> 10) & 1;
+        ctrl.regWrite = (signals >> 9)  & 1;
+        ctrl.spType =   (signals >> 7)  & 1;
+        ctrl.memWrite = (signals >> 6)  & 1;
+        ctrl.memRead =  (signals >> 5)  & 1;
+        ctrl.aluOP =    (signals >> 2)  & 0b111;
+        ctrl.aluSRC =    signals        & 3;
 
         return ctrl;
     }
 
-    bool BranchComp(const word &RS1_Val, const word &RS2_Val, const byte &subOp)
+    bool BranchComp(word RS1_Val, word RS2_Val, BranchCond cond)
     {
-        switch (subOp)
+        switch (cond)
         {
-        case 0:
+        case BranchCond::BGEU:
             return (RS1_Val > RS2_Val);
-            break;
 
-        case 1:
+        case BranchCond::BNE:
             return (RS1_Val != RS2_Val);
-            break;
 
-        case 2:
+        case BranchCond::BLU:
             return (RS1_Val < RS2_Val);
-            break;
 
-        case 3:
+        case BranchCond::BGE:
             return (int16_t)RS1_Val > (int16_t)RS2_Val;
-            break;
 
-        case 4:
+        case BranchCond::BEQ:
             return (RS1_Val == RS2_Val);
-            break;
 
-        case 5:
+        case BranchCond::BLT:
             return (int16_t)RS1_Val < (int16_t)RS2_Val;
-            break;
 
         default:
             return false;
-            break;
         }
     }
 };

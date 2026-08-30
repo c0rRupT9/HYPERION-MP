@@ -1,0 +1,17 @@
+# Executables & Compiled Binaries
+*.exe
+*.out
+*.o
+*.obj
+*.dll
+*.so
+
+build/
+bin/
+out/
+
+*.hex
+hexTraces/
+
+.DS_Store
+Thumbs.db
