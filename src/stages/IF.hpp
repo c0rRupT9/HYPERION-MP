@@ -46,6 +46,7 @@ public:
             if (isRasPush)
             {
                 rasPtr = ras.push(ifid.pc + 1);
+                ifid.rasPush = true;
             }
         }
 

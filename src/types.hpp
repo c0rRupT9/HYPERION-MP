@@ -66,6 +66,7 @@ struct IFID_REG
     bool btbHit = false;         // Matching target found
     bool predictedTaken = false; // Branch is taken or not
     bool rasPOP = false;         // RAS has POPPED in that cycle
+    bool rasPush = false;        // RAS has pushed in that cycle
 };
 
 // ====================================================== ID-EX ==================================================================

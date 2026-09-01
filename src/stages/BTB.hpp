@@ -100,7 +100,7 @@ class BTB
 
 public:
     BTB_RET searchRows(word currentPC) const
-    {
+    {   // 16-bit value  
         BTB_RET returnResult;
         word pcCurrentUpper = (currentPC >> 5) & 0x7FF;   // Upper 11-bits for comparing the result
         word pcCurrentLower = currentPC & (BTB_SIZE - 1); // Lower 5-bits to search BTB rows

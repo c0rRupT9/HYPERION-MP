@@ -207,7 +207,12 @@ public:
             bool offsetMismatch = idout.actualTaken && ifid.predictedTaken && (ifid.predictedTarget != idout.targetAdress);
             idout.mismatch = (branchMismatch || offsetMismatch);
             idout.rasPtrUpdate = offsetMismatch && ifid.rasPOP; // RAS update
+            if(!ifid.rasPush)
             idout.correctedPtr = ifid.rasPtr + 1;
+            else
+            idout.correctedPtr = ifid.rasPtr;
+            // incase a JALR based push and pop sequence turns out to be false we wont corrupt the stack
+            // instead we will miss the very first ret only
         }
         idout.isStore = signals.memWrite; // Store Hazard Case Handling
         idout.nextIdex.ALUOp = signals.aluOP;
@@ -241,6 +246,7 @@ private:
 
     ControlSignals signalGenerator(byte type, byte subOp)
     {
+        // type -> 2-bits, subOp -> 3-bits
         // Control Signal uses a constant array representing a ROM with instructions
         ControlSignals ctrl{};
         byte opcode = (type << 3 | subOp);
