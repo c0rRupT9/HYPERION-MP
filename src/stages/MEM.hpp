@@ -1,5 +1,6 @@
 // Memory Stage
 #pragma once
+#include "../core.hpp"
 
 
 class MEM

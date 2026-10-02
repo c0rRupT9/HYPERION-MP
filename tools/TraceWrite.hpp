@@ -1,14 +1,8 @@
 #pragma once
+#include "../src/core.hpp"
+#include "../src/stages/BTB.hpp"
+#include "../src/stages/DEC.hpp"
 
-#include <cstdio>
-#include <fstream>
-#include <vector>
-#include <cctype>
-#include <algorithm>
-#include <filesystem>
-#include <charconv>
-#include <array>
-#include <string_view>
 
 namespace fs = std::filesystem;
 

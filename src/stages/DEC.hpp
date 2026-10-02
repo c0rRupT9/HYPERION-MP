@@ -1,6 +1,7 @@
 // Decoder Stage
 #pragma once
-
+#include "../core.hpp"
+#include "BTB.hpp"
 // Instruction Structure in DECROM
 /*
 Tag Sub     Instr   hex   bin(16b)

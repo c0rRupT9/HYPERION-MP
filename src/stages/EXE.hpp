@@ -1,5 +1,5 @@
 // Execute Stage.
-
+#include "../core.hpp"
 #pragma once
 
 class EX

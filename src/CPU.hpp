@@ -1,12 +1,7 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
-#include <array>
-#include <cstdint>
-#include <vector>
-#include <iostream>
-#include <iomanip>
-#include "types.hpp"
+#include "core.hpp"
 #include "stages/IF.hpp"
 #include "stages/DEC.hpp"
 #include "stages/EXE.hpp"

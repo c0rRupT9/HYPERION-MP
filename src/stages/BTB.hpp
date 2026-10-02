@@ -1,9 +1,10 @@
-
 #pragma once
 
 #include "../types.hpp"
 #include <array>
+#include <cstdint>
 #include <cstdio>
+#include <string>
 
 const size_t BTB_SIZE = 32;
 const size_t RAS_DEPTH = 8;
@@ -71,7 +72,7 @@ public:
             int16_t s_val = (int16_t)(regs[i]);
 
             // snprintf returns characters written; offset pointer directly
-            int written = std::snprintf(ptr, end - ptr, "  R%d = %-6d (0x%04X)\n", i, s_val, u_val);
+            int written = std::snprintf(ptr, end - ptr, "  R%d = %-6d (0x%04X) \n", i, s_val, u_val);
             if (written > 0 && ptr + written < end)
             {
                 ptr += written;
@@ -167,9 +168,9 @@ public:
         for (int i = 0; i < 8; i++)
         {
             uint16_t u_val = (uint16_t)(stack[i]);
-
+            int16_t s_val = (int16_t)(stack[i]);
             // snprintf returns characters written; offset pointer directly
-            int written = std::snprintf(ptr, end - ptr, "  Srack%d = %-6d (0x%04X)\n", i, u_val);
+            int written = std::snprintf(ptr, end - ptr, "  Stack%d = %-6d (0x%04X)\n", i, s_val, u_val);
             if (written > 0 && ptr + written < end)
             {
                 ptr += written;

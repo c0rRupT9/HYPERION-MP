@@ -1,7 +1,8 @@
 // WriteBack unit
 
 #pragma once
-
+#include "../core.hpp"
+#include "BTB.hpp"
 
 class WB
 {
